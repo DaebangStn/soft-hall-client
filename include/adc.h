@@ -11,4 +11,4 @@
 
 #define ADC_DRDY_TIMEOUT_US  100
 
-esp_err_t write_adc_data(char* buf, uint16_t data, uint8_t buf_size);
+esp_err_t write_adc_data(char* buf, uint16_t data, uint8_t* remain_size);

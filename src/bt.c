@@ -22,6 +22,7 @@
 #include "esp_spp_api.h"
 #include "esp_log.h"
 #include "esp_vfs.h"
+#include "esp_timer.h"
 
 #include "bt.h"
 
@@ -31,6 +32,8 @@ static const char *TASK_TAG = "bt_task";
 static QueueHandle_t bt_task_queue = NULL;
 
 int bt_fd = -1;
+
+static uint64_t time_ofs = 0; // TODO: change...
 
 static const esp_spp_sec_t sec_mask = ESP_SPP_SEC_AUTHENTICATE;
 static const esp_spp_role_t role_master = ESP_SPP_ROLE_MASTER;
@@ -66,11 +69,12 @@ esp_err_t bt_init(void) {
 }
 
 void bt_task(void *pvParameter) {
-    esp_spp_cfg_t bt_spp_cfg = BT_SPP_DEFAULT_CONFIG();
-    ESP_ERROR_CHECK(esp_spp_enhanced_init(&bt_spp_cfg));
-
     bt_task_queue = *((QueueHandle_t*)pvParameter);
     bt_task_msg_t msg;
+    esp_spp_cfg_t bt_spp_cfg = BT_SPP_DEFAULT_CONFIG();
+    ESP_ERROR_CHECK(esp_spp_enhanced_init(&bt_spp_cfg));
+    ESP_LOGI(TAG, "esp_spp_init finished");
+
     for (;;) {
         if (pdTRUE == xQueueReceive(bt_task_queue, &msg, (TickType_t)portMAX_DELAY)) {
             ESP_LOGD(TASK_TAG, "%s, sig 0x%x, 0x%x", __func__, msg.sig, msg.event);
@@ -113,9 +117,29 @@ bool bt_task_work_dispatch(bt_task_cb_t p_cback, uint16_t event, void *p_params,
     return false;
 }
 
+esp_err_t write_time_data(char* buf, uint8_t* remain_size) {
+    if (time_ofs < 0) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    int64_t time_u = esp_timer_get_time();
+    int64_t time_m = time_u / 1000;
+    time_m += time_ofs;
+    uint8_t buf_size = *remain_size;
+    int res = snprintf(buf, buf_size, "t:%"PRId64"/", time_m);
+    if (res >= buf_size || res < 0) {
+        return ESP_FAIL;
+    }
+    *remain_size -= res;
+    return ESP_OK;
+}
+
 static bool bt_task_send_msg(bt_task_msg_t *msg)
 {
     if (msg == NULL) {
+        return false;
+    }
+    if(bt_task_queue == NULL) {
+        ESP_LOGE(TASK_TAG, "%s bt_task_queue is NULL", __func__);
         return false;
     }
 

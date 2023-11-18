@@ -20,10 +20,14 @@ void led_task(void *pvParameter)
     _init_led();
     while (true) {
         TickType_t do_not_wait = 0;
-        if (xQueueReceive(mode_q, &mode, do_not_wait)) {
-            ESP_LOGI(TAG, "Setting led mode to %s", _get_led_mode_name(mode));
+        if (mode_q != NULL) {            
+            if (xQueueReceive(mode_q, &mode, do_not_wait) == pdTRUE) {
+                ESP_LOGI(TAG, "Setting led mode to %s", _get_led_mode_name(mode));
+            }        
+            ESP_LOGV(TAG, "Current led mode: %s", _get_led_mode_name(mode));
+        } else {
+            ESP_LOGE(TAG, "mode_q is NULL");
         }
-        ESP_LOGV(TAG, "Current led mode: %s", _get_led_mode_name(mode));
         
         uint8_t duty = _get_duty(count, mode);
         count = (count + 1) % 100;
@@ -51,7 +55,10 @@ int led_cmd(int argc, char **argv)
         ESP_LOGE(TAG, "Invalid mode: %d, mode is between %d and %d", mode, LED_OFF, LED_ON);
         return 1;
     }
-    xQueueSend(mode_q, &mode, portMAX_DELAY);
+    if (xQueueSend(mode_q, &mode, portMAX_DELAY) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to send mode to queue");
+        return 1;
+    }
     return 0;
 }
 

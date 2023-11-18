@@ -102,10 +102,13 @@ static esp_err_t check_echoed_tx(spi_transaction_t t) {
     return ESP_OK;
 }
 
-esp_err_t write_adc_data(char* buf, uint16_t data, uint8_t buf_size) {
-    int res = snprintf(buf, buf_size, "%u", data);
-    if (res >= sizeof(buf) || res < 0) {
+esp_err_t write_adc_data(char* buf, uint16_t data, uint8_t* remain_size) {
+    uint8_t buf_size = *remain_size;
+    uint8_t res = snprintf(buf, buf_size, "0:%"PRId16"/", data);
+    if (res >= *remain_size || res < 0) {
+        ESP_LOGE(TAG, "snprintf failed buf_size: %d res: %d", *remain_size, res);
         return ESP_FAIL;
     }
+    *remain_size -= res;
     return ESP_OK;
 }

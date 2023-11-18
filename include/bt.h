@@ -32,5 +32,6 @@ typedef struct {
 esp_err_t bt_init(void);
 void bt_task(void *pvParameter);
 bool bt_task_work_dispatch(bt_task_cb_t p_cback, uint16_t event, void *p_params, int param_len);
+esp_err_t write_time_data(char* buf, uint8_t* remain_size);
 
 #endif
