@@ -1,22 +1,9 @@
 {
 	"folders": [
 		{
-			"name": "soft_hall_client",
+			"name": "soft-hall-client",
 			"path": "."
 		}
 	],
-	"settings": {
-		"files.associations": {
-			"ledc.h": "c",
-			"array": "c",
-			"deque": "c",
-			"string": "c",
-			"unordered_map": "c",
-			"vector": "c",
-			"string_view": "c",
-			"initializer_list": "c",
-			"freertos.h": "c",
-			"spi_master.h": "c"
-		}
-	}
+	"settings": {}
 }
