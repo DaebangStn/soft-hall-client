@@ -14,49 +14,40 @@
 #include "freertos/queue.h"
 
 #include "bt.h"
+#include "adc.h"
 #include "my_nvs.h"
 #include "led.h"
 #include "console.h"
 
 
+static const char *TAG = "main";
+
+
 void write_task(void *pvParameter) {
     int size = 0;
-    uint8_t *spp_data = NULL;
+    char bt_data[SPP_DATA_LEN] = {
+        DEVICE_ID, ':', '0', '/'
+    };
     uint16_t i = 0;
 
-    spp_data = malloc(SPP_DATA_LEN);
-    if (!spp_data) {
-        ESP_LOGE("TAG", "malloc bt_data failed, fd:%d", bt_fd);
-        goto done;
-    }
-
-    for (i = 0; i < SPP_DATA_LEN; ++i) {
-        spp_data[i] = 'a';
-    }
-
     while (true) {
+        ESP_ERROR_CHECK(write_adc_data(bt_data + 4, i++, SPP_DATA_LEN - 4));
         if (bt_fd == -1) {
-            ESP_LOGE("TAG", "bt_fd == -1");
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            ESP_LOGE(TAG, "bt_fd == -1");
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
         } else {
-            ESP_LOGI("TAG", "bt_fd = %d", bt_fd);
-            size = write(bt_fd, spp_data, SPP_DATA_LEN);
+            size = write(bt_fd, bt_data, SPP_DATA_LEN);
             if (size == -1) {
                 break;
             } else if ( size == 0) {
                 /*write fail due to ringbuf is full, retry after 500 ms*/
                 vTaskDelay(500 / portTICK_PERIOD_MS);
             } else {
-                ESP_LOGI("TAG", "fd = %d  data_len = %d", bt_fd, size);
+                ESP_LOGI(TAG, "fd = %d  data_len = %d", bt_fd, size);
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
             }
         }
     }
-done:
-    if (spp_data) {
-        free(spp_data);
-    }
-    vTaskDelete(NULL);
 }
 
 
@@ -72,5 +63,5 @@ void app_main() {
     ESP_ERROR_CHECK(init_console(&repl));
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
 
-    xTaskCreate(write_task, "write", 2048, NULL, 1, NULL);
+    xTaskCreate(write_task, "write", 4096, NULL, 1, NULL);
 }

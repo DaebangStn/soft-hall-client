@@ -43,7 +43,6 @@ static const esp_bt_inq_mode_t inq_mode = ESP_BT_INQ_MODE_GENERAL_INQUIRY;
 static const uint8_t inq_len = 30;
 static const uint8_t inq_num_rsps = 0;
 
-static void bt_write_handle(void * param);
 static void bt_reconnect(void);
 static void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param);
 static void esp_spp_cb(uint16_t e, void *p);
@@ -213,7 +212,6 @@ static void esp_spp_cb(uint16_t e, void *p)
             ESP_LOGI(TAG, "ESP_SPP_OPEN_EVT handle:%"PRIu32" fd:%d rem_bda:[%s]", param->open.handle, param->open.fd,
                      bda2str(param->open.rem_bda, bda_str, sizeof(bda_str)));
             bt_fd = param->open.fd;
-            bt_wr_task_start_up(bt_write_handle, param->open.fd);
         } else {
             ESP_LOGE(TAG, "ESP_SPP_OPEN_EVT status:%d", param->open.status);
         }
@@ -311,56 +309,6 @@ static void esp_spp_stack_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param
 {
     /* To avoid stucking Bluetooth stack, we dispatch the SPP callback event to the other lower priority task */
     bt_task_work_dispatch(esp_spp_cb, event, param, sizeof(esp_spp_cb_param_t));
-}
-
-void bt_wr_task_start_up(void* p_cback, int fd)
-{
-    xTaskCreate(p_cback, "write_read", 2048, (void *)fd, 5, NULL);
-}
-
-void bt_wr_task_shut_down(void)
-{
-    vTaskDelete(NULL);
-}
-
-static void bt_write_handle(void * param)
-{
-    int size = 0;
-    int fd = (int)param;
-    uint8_t *spp_data = NULL;
-    uint16_t i = 0;
-
-    spp_data = malloc(SPP_DATA_LEN);
-    if (!spp_data) {
-        ESP_LOGE(TAG, "malloc bt_data failed, fd:%d", fd);
-        goto done;
-    }
-
-    for (i = 0; i < SPP_DATA_LEN; ++i) {
-        spp_data[i] = i;
-    }
-
-    do {
-        /*
-         * The write function is blocked until all the target length of data has been sent to the lower layer
-         * successfully an error occurs.
-         */
-        size = write(fd, spp_data, SPP_DATA_LEN);
-        if (size == -1) {
-            break;
-        } else if ( size == 0) {
-            /*write fail due to ringbuf is full, retry after 500 ms*/
-            vTaskDelay(500 / portTICK_PERIOD_MS);
-        } else {
-            ESP_LOGI(TAG, "fd = %d  data_len = %d", fd, size);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-        }
-    } while (1);
-done:
-    if (spp_data) {
-        free(spp_data);
-    }
-    bt_wr_task_shut_down();
 }
 
 static void bt_reconnect() {

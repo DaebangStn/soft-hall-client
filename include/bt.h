@@ -6,11 +6,11 @@
 #include "esp_spp_api.h"
 #include "freertos/FreeRTOS.h"
 
-
-#define DEVICE_NAME "SOFT_HALL_1"
+#define DEVICE_ID   'A'
+#define DEVICE_NAME "SOFT_HALL_" __STRINGIFY(DEVICE_ID)
 #define SERVER_NAME "geon-pavilion"
 
-#define SPP_DATA_LEN 20
+#define SPP_DATA_LEN 30
 
 extern int bt_fd;
 
@@ -32,8 +32,5 @@ typedef struct {
 esp_err_t bt_init(void);
 void bt_task(void *pvParameter);
 bool bt_task_work_dispatch(bt_task_cb_t p_cback, uint16_t event, void *p_params, int param_len);
-
-void bt_wr_task_start_up(void* p_cback, int fd);
-void bt_wr_task_shut_down(void);
 
 #endif
