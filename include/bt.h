@@ -10,7 +10,7 @@
 #define DEVICE_NAME "SOFT_HALL_" __STRINGIFY(DEVICE_ID)
 #define SERVER_NAME "geon-pavilion"
 
-#define SPP_DATA_LEN 30
+#define SPP_DATA_LEN 100
 
 extern int bt_fd;
 

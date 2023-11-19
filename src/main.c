@@ -46,7 +46,7 @@ void write_task(void *pvParameter) {
                 vTaskDelay(500 / portTICK_PERIOD_MS);
             } else {
                 ESP_LOGI(TAG, "fd = %d  data_len = %d", bt_fd, size);
-                vTaskDelay(50 / portTICK_PERIOD_MS);
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
             }
         }
     }

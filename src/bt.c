@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <arpa/inet.h>
 
 #include "sys/unistd.h"
 #include "time.h"
@@ -54,7 +55,7 @@ static char *bda2str(uint8_t * bda, char *str, size_t size);
 static bool bt_task_send_msg(bt_task_msg_t *msg);
 static void bt_task_work_dispatched(bt_task_msg_t *msg);
 static void esp_spp_stack_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param);
-
+static void recv_server_time(void *param);
 
 
 esp_err_t bt_init(void) {
@@ -122,8 +123,8 @@ esp_err_t write_time_data(char* buf, uint8_t* remain_size) {
         return ESP_ERR_INVALID_STATE;
     }
     int64_t time_u = esp_timer_get_time();
+    time_u += time_ofs;
     int64_t time_m = time_u / 1000;
-    time_m += time_ofs;
     uint8_t buf_size = *remain_size;
     int res = snprintf(buf, buf_size, "t:%"PRId64"/", time_m);
     if (res >= buf_size || res < 0) {
@@ -236,6 +237,7 @@ static void esp_spp_cb(uint16_t e, void *p)
             ESP_LOGI(TAG, "ESP_SPP_OPEN_EVT handle:%"PRIu32" fd:%d rem_bda:[%s]", param->open.handle, param->open.fd,
                      bda2str(param->open.rem_bda, bda_str, sizeof(bda_str)));
             bt_fd = param->open.fd;
+            xTaskCreate(recv_server_time, "recv_server_time", 4096, &bt_fd, 1, NULL);
         } else {
             ESP_LOGE(TAG, "ESP_SPP_OPEN_EVT status:%d", param->open.status);
         }
@@ -336,5 +338,29 @@ static void esp_spp_stack_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param
 }
 
 static void bt_reconnect() {
+    bt_fd = -1;
+    time_ofs = 0;
     esp_bt_gap_start_discovery(inq_mode, inq_len, inq_num_rsps);
+}
+
+static void recv_server_time(void *param) {
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    ESP_LOGI(TAG, "recv_server_time");
+    int fd = *((int*)param);
+    char buf[20] = {};
+    uint8_t size = read(fd, buf, 19);
+    ESP_LOGI(TAG, "size = %d", size);
+    if (size <= 0 || size == 19) {
+        ESP_LOGE(TAG, "receiving server time failed");
+        bt_task_work_dispatch((void *)bt_reconnect, 0, NULL, 0);
+    } else {
+        buf[size] = '\0';
+        int64_t time_u = esp_timer_get_time();
+        ESP_LOGI(TAG, "time_u = %"PRId64, time_u);
+        uint64_t server_time_u = strtoull(buf, NULL, 10);
+        ESP_LOGI(TAG, "server_time_u = %"PRId64, server_time_u);
+        time_ofs = server_time_u - time_u;
+        ESP_LOGI(TAG, "time_ofs = %"PRId64, time_ofs);
+    }
+    vTaskDelete(NULL);
 }
