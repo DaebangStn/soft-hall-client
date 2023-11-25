@@ -5,9 +5,9 @@
 #define PIN_NUM_MOSI      23
 #define PIN_NUM_CLK       18
 #define PIN_NUM_CS        5
-#define PIN_NUM_DRDY      17
+#define PIN_NUM_DRDY      10
 
-#define SPI_BAUDRATE      2000000
+#define SPI_BAUDRATE      1000000
 #define SPI_BUS           SPI2_HOST
 /*
     to change this value, 

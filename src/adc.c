@@ -25,14 +25,13 @@ static const char *TAG = "adc";
 
     All bits are fixed except MUX1, MUX0 (AIN selection)
 */
-static const unsigned char default_tx_data[4] = {0x82 , 0xeb};
+static const unsigned char default_tx_data[4] = {0x42 , 0xeb};
 static const unsigned char mux_ain0 = 0x42;
 static const unsigned char mux_ain1 = 0x52;
 static const unsigned char mux_ain2 = 0x62;
 static const unsigned char mux_ain3 = 0x72;
 static const uint8_t resolution = 15;
 
-static spi_transaction_t tx[4] = {};
 static unsigned char rx_data[4];
 volatile BaseType_t sem_block_drdy = pdFALSE;
 
@@ -43,23 +42,17 @@ spi_transaction_t get_transaction(uint8_t num_ain);
 esp_err_t check_drdy(uint16_t timeout_us);
 float convert_voltage(spi_transaction_t t);
 esp_err_t check_echoed_tx(spi_transaction_t t);
-void pre_spi_read(void);
-void post_spi_read(float* voltages);
-
-void IRAM_ATTR isr_check_drdy(void* arg) {
-    sem_block_drdy = pdTRUE;
-}
+void pre_spi_read(spi_transaction_t* tx);
+void post_spi_read(spi_transaction_t* tx, float* v);
 
 void adc_task(void *pvParameter) {
-    float voltages[4] = {};
-    ESP_LOGI(TAG, "voltages: %f, %f, %f, %f", voltages[0], voltages[1], voltages[2], voltages[3]);
     init_spi();
     spi_device_handle_t spi = init_device();
+    float voltages[8] = {};
     while (true) {
-        float voltages[4] = {};
         read_adc(spi, 16, voltages);
-        ESP_LOGI(TAG, "voltages: %f, %f, %f, %f", voltages[0], voltages[1], voltages[2], voltages[3]);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "voltages: 0/%f, 1/%f, 2/%f, 3/%f", voltages[0], voltages[1], voltages[2], voltages[3]);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -100,56 +93,55 @@ spi_device_handle_t init_device(void) {
     };
     gpio_config(&cs_cfg);
     gpio_config_t drdy_cfg = {
-        .intr_type = GPIO_INTR_NEGEDGE,
         .pin_bit_mask = BIT64(PIN_NUM_DRDY),
+        .pull_up_en = GPIO_PULLUP_ENABLE,
         .mode = GPIO_MODE_INPUT,
     };
     gpio_config(&drdy_cfg);
-    gpio_install_isr_service(0);
-    gpio_isr_handler_add(PIN_NUM_DRDY, isr_check_drdy, NULL);
-    gpio_intr_disable(PIN_NUM_DRDY);
-
     return spi;
 }
 
-void pre_spi_read(void) {
-    gpio_set_level(PIN_NUM_CS, 0);
-    gpio_intr_enable(PIN_NUM_DRDY);
-    sem_block_drdy = pdFALSE;
-    for (int i=0; i<4; i++) {
-        tx[i] = get_transaction(i + 1);
+void pre_spi_read(spi_transaction_t* tx) {
+    for(int i=0; i<6; i++) {
+        tx[i] = get_transaction(i);
     }
+    gpio_set_level(PIN_NUM_CS, 0);
 }
 
-void post_spi_read(float* voltages) {
+void post_spi_read(spi_transaction_t* tx, float* v) {
     gpio_set_level(PIN_NUM_CS, 1);
-    gpio_intr_disable(PIN_NUM_DRDY);
-
-    for (int i=0; i<4; i++) {
-        if (check_echoed_tx(tx[i]) == ESP_OK) {
-            voltages[i] = convert_voltage(tx[i]);
+    for(int i=2; i<6; i++) {
+        if(check_echoed_tx(tx[i]) != ESP_OK) {
+            ESP_LOGE(TAG, "returned register values do not match sent values");
+            ESP_LOGW(TAG, "sent:");
+            esp_log_buffer_hex(TAG, tx[i].tx_data, 4);
+            ESP_LOGW(TAG, "returned:");
+            esp_log_buffer_hex(TAG, tx[i].rx_data, 4);
+        }else{
+            v[i-2] = convert_voltage(tx[i]);
         }
     }
 }
 
 void read_adc(spi_device_handle_t spi, uint8_t resolution, float* voltages) {
-    pre_spi_read();
-    for (uint8_t i=0; i<4; i++) {
+    spi_transaction_t tx[6];
+    pre_spi_read(tx);
+    for (uint8_t i=0; i<6; i++) {
         int64_t now = esp_timer_get_time();
-        while (sem_block_drdy == pdFALSE) {
+        while (gpio_get_level(PIN_NUM_DRDY) == 1) {
             if (esp_timer_get_time() - now > ADC_DRDY_TIMEOUT_US) {
                 ESP_LOGE(TAG, "timeout waiting for drdy");
                 break;
             }
         }
         ESP_ERROR_CHECK(spi_device_polling_transmit(spi, &tx[i]));
-        sem_block_drdy = pdFALSE; // semaphore is set while transaction is in progress
     }
-    post_spi_read(voltages);
+    post_spi_read(tx, voltages);
 }
 
 spi_transaction_t get_transaction(uint8_t num_ain) {
     unsigned char ain;
+    num_ain %= 4;
     switch (num_ain) {
         case 0:
             ain = mux_ain0;
@@ -162,9 +154,6 @@ spi_transaction_t get_transaction(uint8_t num_ain) {
             break;
         case 3:
             ain = mux_ain3;
-            break;
-        case 4:
-            ain = mux_ain0;
             break;
         default:
             ESP_LOGE(TAG, "invalid num_ain: %d", num_ain);
@@ -183,12 +172,6 @@ spi_transaction_t get_transaction(uint8_t num_ain) {
 
 float convert_voltage(spi_transaction_t t) {
     uint8_t* out = (uint8_t*)t.rx_data;
-    if (out[0] == 0x00 && out[1] == 0x00) {
-        ESP_LOGW(TAG, "adc conversion failed");
-        ESP_LOGI(TAG, "adc returned:");
-        esp_log_buffer_hex(TAG, out, 4);
-        return 0.0;
-    }
     uint16_t data = (out[0] << 8) | out[1];
     float voltage = (float)data / (1 << resolution) * ADC_FS;
     return voltage;
@@ -196,7 +179,6 @@ float convert_voltage(spi_transaction_t t) {
 
 // This function always fails when adc is in SS mode
 esp_err_t check_echoed_tx(spi_transaction_t t) {
-    ESP_LOGI(TAG, "checking config echoed...");
     uint8_t* out = (uint8_t*)t.rx_data;
     uint8_t* in = (uint8_t*)t.tx_data;
     if (out[2] != in[0] || out[3] != in[1]) {
@@ -205,7 +187,6 @@ esp_err_t check_echoed_tx(spi_transaction_t t) {
         esp_log_buffer_hex(TAG, in, 4);
         ESP_LOGE(TAG, "adc returned:");
         esp_log_buffer_hex(TAG, out, 4);
-        return ESP_FAIL;
     }
     return ESP_OK;
 }

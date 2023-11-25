@@ -64,20 +64,20 @@ void app_main() {
     // }
     // xTaskCreate(bt_task, "bt", 4096, &bt_task_msg_q, 1, NULL);
 
-    ESP_LOGI(TAG, "initializing led...");
-    QueueHandle_t led_mode_q = xQueueCreate(5, sizeof(LedMode_t));
-    if(led_mode_q == 0) {
-        ESP_LOGE(TAG, "led_mode_q xQueueCreate failed");
-        exit(1);
-    }
-    xTaskCreate(led_task, "led", 2048, &led_mode_q, 1, NULL);
+    // ESP_LOGI(TAG, "initializing led...");
+    // QueueHandle_t led_mode_q = xQueueCreate(5, sizeof(LedMode_t));
+    // if(led_mode_q == 0) {
+    //     ESP_LOGE(TAG, "led_mode_q xQueueCreate failed");
+    //     exit(1);
+    // }
+    // xTaskCreate(led_task, "led", 2048, &led_mode_q, 1, NULL);
 
     ESP_LOGI(TAG, "initializing adc...");
     xTaskCreate(adc_task, "adc", 4096, NULL, 1, NULL);
 
-    esp_console_repl_t *repl = NULL;
-    ESP_ERROR_CHECK(init_console(&repl));
-    ESP_ERROR_CHECK(esp_console_start_repl(repl));
+    // esp_console_repl_t *repl = NULL;
+    // ESP_ERROR_CHECK(init_console(&repl));
+    // ESP_ERROR_CHECK(esp_console_start_repl(repl));
 
     // xTaskCreate(write_task, "write", 4096, NULL, 1, NULL);
 }
