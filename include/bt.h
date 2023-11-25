@@ -8,7 +8,7 @@
 
 #define DEVICE_ID   'A'
 #define DEVICE_NAME "SOFT_HALL_" __STRINGIFY(DEVICE_ID)
-#define SERVER_NAME "geon-pavilion"
+#define SERVER_NAME "DESKTOP-I7G75LD" // "geon-pavilion"
 
 #define SPP_DATA_LEN 100
 

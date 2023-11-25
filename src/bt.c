@@ -319,7 +319,16 @@ static void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
     }
     case ESP_BT_GAP_PIN_REQ_EVT:{
         ESP_LOGI(TAG, "ESP_BT_GAP_PIN_REQ_EVT - PIN code not required");
-        esp_bt_gap_pin_reply(param->pin_req.bda, false, 0, NULL);
+        ESP_LOGI("esp_bt_gap_cb", "Input pin code: XXXXXX");
+esp_bt_pin_code_t pin_code;
+pin_code[0] = 'X';
+pin_code[1] = 'X';
+pin_code[2] = 'X';
+pin_code[3] = 'X';
+pin_code[4] = 'X';
+pin_code[5] = 'X';
+esp_bt_gap_pin_reply(param->pin_req.bda, true, 6, pin_code);
+        // esp_bt_gap_pin_reply(param->pin_req.bda, false, 0, NULL);
         break;
     }
     case ESP_BT_GAP_MODE_CHG_EVT:
