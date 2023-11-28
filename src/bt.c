@@ -34,7 +34,7 @@ static QueueHandle_t bt_task_queue = NULL;
 
 int bt_fd = -1;
 
-static uint64_t time_ofs = 0; // TODO: change...
+static uint64_t time_ofs = -1; // TODO: change...
 
 static const esp_spp_sec_t sec_mask = ESP_SPP_SEC_AUTHENTICATE;
 static const esp_spp_role_t role_master = ESP_SPP_ROLE_MASTER;
@@ -120,7 +120,7 @@ bool bt_task_work_dispatch(bt_task_cb_t p_cback, uint16_t event, void *p_params,
 
 esp_err_t write_time_data(char* buf, uint8_t* remain_size) {
     if (time_ofs < 0) {
-        return ESP_ERR_INVALID_STATE;
+        return ESP_OK;
     }
     int64_t time_u = esp_timer_get_time();
     time_u += time_ofs;
@@ -348,7 +348,7 @@ static void esp_spp_stack_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param
 
 static void bt_reconnect() {
     bt_fd = -1;
-    time_ofs = 0;
+    time_ofs = -1;
     esp_bt_gap_start_discovery(inq_mode, inq_len, inq_num_rsps);
 }
 

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -10,6 +11,7 @@
 #include "esp_timer.h"
 #include "esp_log.h"
 #include "adc.h"
+#include "bt.h"
 
 static const char *TAG = "adc";
 
@@ -48,11 +50,32 @@ void post_spi_read(spi_transaction_t* tx, float* v);
 void adc_task(void *pvParameter) {
     init_spi();
     spi_device_handle_t spi = init_device();
-    float voltages[8] = {};
+    float voltages[4] = {};
+    char bt_data[SPP_DATA_LEN] = {};
+    uint8_t buf_size = SPP_DATA_LEN;
+
     while (true) {
+        uint8_t remain_size = SPP_DATA_LEN;
         read_adc(spi, 16, voltages);
-        ESP_LOGI(TAG, "voltages: 0/%f, 1/%f, 2/%f, 3/%f", voltages[0], voltages[1], voltages[2], voltages[3]);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ESP_LOGD(TAG, "voltages: 0/%f, 1/%f, 2/%f, 3/%f", voltages[0], voltages[1], voltages[2], voltages[3]);
+        if (bt_fd == -1) {
+            ESP_LOGW(TAG, "bt is not connected");
+        } else {
+            ESP_ERROR_CHECK(write_time_data(bt_data + (buf_size - remain_size), &remain_size));
+            ESP_ERROR_CHECK(write_adc_data(bt_data + (buf_size - remain_size), voltages, &remain_size));
+            ESP_LOGD(TAG, "remaining write buffer size = %d", remain_size);
+            int size = write(bt_fd, bt_data, SPP_DATA_LEN);
+            if (size == -1) {
+                ESP_LOGE(TAG, "write failed");
+                break;
+            } else if (size == 0) {
+                ESP_LOGW(TAG, "write failed due to ringbuf is full, dropping data");
+            } else {
+                ESP_LOGI(TAG, "fd = %d  data_len = %d", bt_fd, size);
+            }
+        }
+
+        vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 }
 
@@ -191,13 +214,17 @@ esp_err_t check_echoed_tx(spi_transaction_t t) {
     return ESP_OK;
 }
 
-esp_err_t write_adc_data(char* buf, uint16_t data, uint8_t* remain_size) {
+// data must be float[4]
+esp_err_t write_adc_data(char* buf, float* data, uint8_t* remain_size) {
     uint8_t buf_size = *remain_size;
-    int res = snprintf(buf, buf_size, "0:%"PRId16"/", data);
-    if (res >= *remain_size || res < 0) {
-        ESP_LOGE(TAG, "snprintf failed buf_size: %d res: %d", *remain_size, res);
-        return ESP_FAIL;
+    for (int i=0; i<4; i++) {
+        int res = snprintf(buf, buf_size, "%d:%4.2f/", i, data[i]);
+        if (res >= *remain_size || res < 0) {
+            ESP_LOGE(TAG, "snprintf failed buf_size: %d res: %d", *remain_size, res);
+            return ESP_FAIL;
+        }
+        *remain_size -= res;
+        buf += res;
     }
-    *remain_size -= res;
     return ESP_OK;
 }

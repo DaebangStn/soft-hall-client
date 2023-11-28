@@ -7,7 +7,7 @@
 #define PIN_NUM_CS        5
 #define PIN_NUM_DRDY      10
 
-#define SPI_BAUDRATE      1000000
+#define SPI_BAUDRATE      2500000
 #define SPI_BUS           SPI2_HOST
 /*
     to change this value, 
@@ -19,4 +19,4 @@
 #define ADC_DRDY_TIMEOUT_US  100000
 
 void adc_task(void *pvParameter);
-esp_err_t write_adc_data(char* buf, uint16_t data, uint8_t* remain_size);
+esp_err_t write_adc_data(char* buf, float* data, uint8_t* remain_size);
