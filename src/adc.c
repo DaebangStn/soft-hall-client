@@ -41,7 +41,6 @@ void init_spi(void);
 spi_device_handle_t init_device(void);
 void read_adc(spi_device_handle_t spi, uint8_t resolution, float* voltages);
 spi_transaction_t get_transaction(uint8_t num_ain);
-esp_err_t check_drdy(uint16_t timeout_us);
 float convert_voltage(spi_transaction_t t);
 esp_err_t check_echoed_tx(spi_transaction_t t);
 void pre_spi_read(spi_transaction_t* tx);
