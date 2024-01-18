@@ -21,13 +21,13 @@ static const char *TAG = "adc";
     11 10 9    8 
     FSR_4096   Continous conversion mode
     7 6 5      4 
-    868SPS     ADC mode (no TS)
+    3300SPS    ADC mode (no TS)
     3          2 1      0
     PULL_UP    VALID    Reserved
 
     All bits are fixed except MUX1, MUX0 (AIN selection)
 */
-static const unsigned char default_tx_data[4] = {0x42 , 0xeb};
+static const unsigned char default_tx_data[4] = {0x42 , 0xcb};
 static const unsigned char mux_ain0 = 0x42;
 static const unsigned char mux_ain1 = 0x52;
 static const unsigned char mux_ain2 = 0x62;
@@ -57,9 +57,10 @@ void adc_task(void *pvParameter) {
     while (true) {
         uint8_t remain_size = SPP_DATA_LEN;
         read_adc(spi, 16, voltages);
-        ESP_LOGD(TAG, "voltages: 0/%f, 1/%f, 2/%f, 3/%f", voltages[0], voltages[1], voltages[2], voltages[3]);
+        ESP_LOGI(TAG, "voltages: 0/%f, 1/%f, 2/%f, 3/%f", voltages[0], voltages[1], voltages[2], voltages[3]);
         if (bt_fd == -1) {
             ESP_LOGW(TAG, "bt is not connected");
+            vTaskDelay(300 / portTICK_PERIOD_MS);
         } else {
             ESP_ERROR_CHECK(write_time_data(bt_data + (buf_size - remain_size), &remain_size));
             ESP_ERROR_CHECK(write_adc_data(bt_data + (buf_size - remain_size), voltages, &remain_size));

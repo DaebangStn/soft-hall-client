@@ -7,7 +7,7 @@
 #define PIN_NUM_CS        5
 #define PIN_NUM_DRDY      10
 
-#define SPI_BAUDRATE      2500000
+#define SPI_BAUDRATE      1000000
 #define SPI_BUS           SPI2_HOST
 /*
     to change this value, 
