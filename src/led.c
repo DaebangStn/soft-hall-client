@@ -21,10 +21,10 @@ void led_task(void *pvParameter)
     while (true) {
         TickType_t do_not_wait = 0;
         if (mode_q != NULL) {            
+            ESP_LOGE(TAG, "Current led mode: %s", _get_led_mode_name(mode));
             if (xQueueReceive(mode_q, &mode, do_not_wait) == pdTRUE) {
                 ESP_LOGI(TAG, "Setting led mode to %s", _get_led_mode_name(mode));
             }        
-            ESP_LOGV(TAG, "Current led mode: %s", _get_led_mode_name(mode));
         } else {
             ESP_LOGE(TAG, "mode_q is NULL");
         }

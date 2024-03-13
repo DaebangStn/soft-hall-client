@@ -26,6 +26,7 @@
 #include "esp_timer.h"
 
 #include "bt.h"
+#include "led.h"
 
 static const char *TAG = "bt_cfg";
 static const char *TASK_TAG = "bt_task";

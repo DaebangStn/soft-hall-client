@@ -7,6 +7,8 @@ typedef enum {
     LED_ON
 } LedMode_t;
 
+extern QueueHandle_t mode_q;
+
 void led_task(void *pvParameter);
 int led_cmd(int argc, char **argv);
 

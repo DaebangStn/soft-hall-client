@@ -57,6 +57,16 @@ void app_main() {
     ESP_ERROR_CHECK(init_nvs());
     ESP_ERROR_CHECK(bt_init());
 
+    // due to the led pin duplicating with the spi pin, 
+    // we cannot use the led task
+    // ESP_LOGI(TAG, "initializing led...");
+    // QueueHandle_t led_mode_q = xQueueCreate(5, sizeof(LedMode_t));
+    // if(led_mode_q == 0) {
+    //     ESP_LOGE(TAG, "led_mode_q xQueueCreate failed");
+    //     exit(1);
+    // }
+    // xTaskCreate(led_task, "led", 2048, &led_mode_q, 1, NULL);
+
     QueueHandle_t bt_task_msg_q = xQueueCreate(5, sizeof(bt_task_msg_t));
     if(bt_task_msg_q == 0) {
         ESP_LOGE(TAG, "bt_task_msg_q xQueueCreate failed");
@@ -64,20 +74,14 @@ void app_main() {
     }
     xTaskCreate(bt_task, "bt", 4096, &bt_task_msg_q, 1, NULL);
 
-    ESP_LOGI(TAG, "initializing led...");
-    QueueHandle_t led_mode_q = xQueueCreate(5, sizeof(LedMode_t));
-    if(led_mode_q == 0) {
-        ESP_LOGE(TAG, "led_mode_q xQueueCreate failed");
-        exit(1);
-    }
-    xTaskCreate(led_task, "led", 2048, &led_mode_q, 1, NULL);
-
     ESP_LOGI(TAG, "initializing adc...");
     xTaskCreate(adc_task, "adc", 4096, NULL, 1, NULL);
 
-    esp_console_repl_t *repl = NULL;
-    ESP_ERROR_CHECK(init_console(&repl));
-    ESP_ERROR_CHECK(esp_console_start_repl(repl));
+    // used when console is online 
+    // esp_console_repl_t *repl = NULL;
+    // ESP_ERROR_CHECK(init_console(&repl));
+    // ESP_ERROR_CHECK(esp_console_start_repl(repl));
 
+    // dummy task
     // xTaskCreate(write_task, "write", 4096, NULL, 1, NULL);
 }

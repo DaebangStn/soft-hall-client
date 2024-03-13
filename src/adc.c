@@ -67,8 +67,8 @@ void adc_task(void *pvParameter) {
     while (true) {
         for(int adc_idx=CHECKED_PIN; adc_idx<(NUM_ADCS+CHECKED_PIN); adc_idx++) {
             uint8_t remain_size = SPP_DATA_LEN;
-            read_adc(adc_idx, spi, resolution, voltages);
-            ESP_LOGI(TAG, "idx:%d, voltages: 0/%f, 1/%f, 2/%f, 3/%f", adc_idx, voltages[0], voltages[1], voltages[2], voltages[3]);
+            // read_adc(adc_idx, spi, resolution, voltages);
+            // ESP_LOGI(TAG, "idx:%d, voltages: 0/%f, 1/%f, 2/%f, 3/%f", adc_idx, voltages[0], voltages[1], voltages[2], voltages[3]);
             if (bt_fd == -1) {
                 ESP_LOGW(TAG, "bt is not connected");
                 vTaskDelay(500 / portTICK_PERIOD_MS);
