@@ -87,7 +87,7 @@ void adc_task(void *pvParameter) {
                 }
             }
         }
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
 }
 
