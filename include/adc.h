@@ -29,9 +29,9 @@
 
 #define ADC_DRDY_TIMEOUT_US  100000
 
-#define NUM_ADCS          1
+#define NUM_ADCS          2
 #define TOTAL_ADCS        6
-#define CHECKED_PIN       2
+#define CHECKED_PIN       0
 
 void adc_task(void *pvParameter);
 esp_err_t write_adc_data(char* buf, uint8_t idx_adc, float* data, uint8_t* remain_size);

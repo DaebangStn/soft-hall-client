@@ -6,8 +6,7 @@
 #include "esp_spp_api.h"
 #include "freertos/FreeRTOS.h"
 
-#define DEVICE_ID   'A'
-#define DEVICE_NAME "SOFT_HALL_" __STRINGIFY(DEVICE_ID)
+#define DEVICE_NAME "SOFT_HALL_A"
 #define SERVER_NAME "DESKTOP-I7G75LD" // "geon-pavilion"
 
 #define SPP_DATA_LEN 100

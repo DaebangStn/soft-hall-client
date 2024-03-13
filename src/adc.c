@@ -65,18 +65,18 @@ void adc_task(void *pvParameter) {
     uint8_t buf_size = SPP_DATA_LEN;
 
     while (true) {
-        uint8_t remain_size = SPP_DATA_LEN;
         for(int adc_idx=CHECKED_PIN; adc_idx<(NUM_ADCS+CHECKED_PIN); adc_idx++) {
+            uint8_t remain_size = SPP_DATA_LEN;
             read_adc(adc_idx, spi, resolution, voltages);
             ESP_LOGI(TAG, "idx:%d, voltages: 0/%f, 1/%f, 2/%f, 3/%f", adc_idx, voltages[0], voltages[1], voltages[2], voltages[3]);
             if (bt_fd == -1) {
                 ESP_LOGW(TAG, "bt is not connected");
-                vTaskDelay(300 / portTICK_PERIOD_MS);
+                vTaskDelay(500 / portTICK_PERIOD_MS);
             } else {
                 ESP_ERROR_CHECK(write_time_data(bt_data + (buf_size - remain_size), &remain_size));
                 ESP_ERROR_CHECK(write_adc_data(bt_data + (buf_size - remain_size), adc_idx, voltages, &remain_size));
                 ESP_LOGD(TAG, "remaining write buffer size = %d", remain_size);
-                int size = write(bt_fd, bt_data, SPP_DATA_LEN);
+                int size = write(bt_fd, bt_data, buf_size - remain_size);
                 if (size == -1) {
                     ESP_LOGE(TAG, "write failed");
                     break;
@@ -87,7 +87,7 @@ void adc_task(void *pvParameter) {
                 }
             }
         }
-        vTaskDelay(50 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
 

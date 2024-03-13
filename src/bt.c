@@ -228,7 +228,7 @@ static void esp_spp_cb(uint16_t e, void *p)
             /* We only connect to the first found server on the remote SPP acceptor here */
             esp_spp_connect(sec_mask, role_master, param->disc_comp.scn[0], peer_bd_addr);
         } else {
-            ESP_LOGE(TAG, "ESP_SPP_DISCOVERY_COMP_EVT status=%d", param->disc_comp.status);
+            ESP_LOGE(TAG, "ESP_SPP_DISCOVERY_COMP_EVT failed status=%d", param->disc_comp.status);
             bt_task_work_dispatch((void *)bt_reconnect, 0, NULL, 0);
         }
         break;
@@ -246,7 +246,6 @@ static void esp_spp_cb(uint16_t e, void *p)
         bt_fd = -1;
         ESP_LOGW(TAG, "ESP_SPP_CLOSE_EVT status:%d handle:%"PRIu32" close_by_remote:%d", param->close.status,
                  param->close.handle, param->close.async);
-        ESP_LOGI(TAG, "Reconnect...");
         bt_task_work_dispatch((void *)bt_reconnect, 0, NULL, 0);
         break;
     case ESP_SPP_START_EVT:
@@ -282,17 +281,17 @@ static void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
     switch(event){
     case ESP_BT_GAP_DISC_RES_EVT:
         ESP_LOGI(TAG, "ESP_BT_GAP_DISC_RES_EVT");
-        esp_log_buffer_hex(TAG, param->disc_res.bda, ESP_BD_ADDR_LEN);
         /* Find the target peer device name in the EIR data */
         for (int i = 0; i < param->disc_res.num_prop; i++){
             if (param->disc_res.prop[i].type == ESP_BT_GAP_DEV_PROP_EIR
                 && get_name_from_eir(param->disc_res.prop[i].val, peer_bdname, &peer_bdname_len)){
-                esp_log_buffer_char(TAG, peer_bdname, peer_bdname_len);
+                ESP_LOGI(TAG, "device name: %s", peer_bdname);
                 if (strlen(SERVER_NAME) == peer_bdname_len
                     && strncmp(peer_bdname, SERVER_NAME, peer_bdname_len) == 0) {
                     memcpy(peer_bd_addr, param->disc_res.bda, ESP_BD_ADDR_LEN);
                     /* Have found the target peer device, cancel the previous GAP discover procedure. And go on
                      * dsicovering the SPP service on the peer device */
+                    esp_log_buffer_char(TAG, "Found target", 12);
                     esp_bt_gap_cancel_discovery();
                     esp_spp_start_discovery(peer_bd_addr);
                 }
@@ -300,7 +299,7 @@ static void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
         }
         break;
     case ESP_BT_GAP_DISC_STATE_CHANGED_EVT:
-        ESP_LOGI(TAG, "ESP_BT_GAP_DISC_STATE_CHANGED_EVT");
+        ESP_LOGD(TAG, "ESP_BT_GAP_DISC_STATE_CHANGED_EVT");
         break;
     case ESP_BT_GAP_RMT_SRVCS_EVT:
         ESP_LOGI(TAG, "ESP_BT_GAP_RMT_SRVCS_EVT");
@@ -349,6 +348,7 @@ static void esp_spp_stack_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param
 static void bt_reconnect() {
     bt_fd = -1;
     time_ofs = -1;
+    esp_log_buffer_char(TAG, "reconnecting...", 15);
     esp_bt_gap_start_discovery(inq_mode, inq_len, inq_num_rsps);
 }
 
